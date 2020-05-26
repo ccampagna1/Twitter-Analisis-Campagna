@@ -10,7 +10,7 @@ import twitter_credentials
 import numpy as np
 import pandas as pd
 import re
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 import json
 import os
@@ -202,10 +202,10 @@ if __name__ == "__main__":
 # =============================================================================
 #     # Con esto podemos ver cuales son los campos que podemos consultar de un tweet.
 #     #print(dir(tweets[0]))
-#    
+#
 #     twitter_client = TwitterClient('pycon')
 #     print(twitter_client.get_user_timeline_tweets(1))
-#    
+#
 #     # cuenta la cantidad de retweets que tuvo un tweet
 #     #print(tweets[0].retweet_count)
 # =============================================================================
@@ -215,10 +215,10 @@ if __name__ == "__main__":
 # =============================================================================
 #     # Get average length over all tweets.
 #     print(np.mean(df['len']))
-#     
+#
 #     # Get the number of likes for the most liked tweet.
 #     print(np.max(df['likes']))
-#     
+#
 #     # Get the number of retweets for the most retweeted tweet.
 #     print(np.max(df['retweets']))
 # =============================================================================
@@ -230,14 +230,14 @@ if __name__ == "__main__":
 #     time_likes = pd.Series(data=df['likes'].values, index=df['date'])
 #     time_likes.plot(figsize = (16,4),color = 'r')
 #     plt.show()
-#     
+#
 #     time_retweets = pd.Series(data=df['retweets'].values, index=df['date'])
 #     time_retweets.plot(figsize = (16,4), color = 'b')
 #     plt.show()
-#     
+#
 #     time_likes = pd.Series(data=df['likes'].values, index=df['date'])
 #     time_likes.plot(figsize = (16,4), label = 'Likes', legend = True)
-# 
+#
 #     time_retweets = pd.Series(data=df['retweets'].values, index=df['date'])
 #     time_retweets.plot(figsize = (16,4), label = 'retweets', legend = True)
 #     plt.show()
@@ -247,7 +247,7 @@ if __name__ == "__main__":
 
 # =============================================================================
 #    df['sentiment'] = np.array([tweet_analyzer.analyze_sentiment(tweet) for tweet in df['tweets']])
-#    
+#
 #    print(df.head(10))
 #
 # =============================================================================

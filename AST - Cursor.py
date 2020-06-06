@@ -77,57 +77,56 @@ def analyze_sentiment(tweet):
         return -1
 
 
-def process_tweet(tweet, i):
-    df = pd.DataFrame(columns=['Tweets', 'Tweets_retweet', 'User', 'User_statuses_count',
-                               'user_followers', 'User_location', 'User_verified',
-                               'fav_count', 'rt_count', 'tweet_date'])
-    df.loc[i, 'Tweets'] = tweet.full_text
+def process_tweet(tweet):
+    """
+    Se campura la informacion requerida de un tweet.
+    """
+
+    data = {'Tweets': tweet.full_text, 'User': tweet.user.name, 'User_statuses_count': tweet.user.statuses_count,
+            'User_followers': tweet.user.followers_count, 'User_verified': tweet.user.verified,
+            'User_location': tweet.user.location, 'fav_count': tweet.favorite_count, 'rt_count': tweet.retweet_count,
+            'tweet_date': tweet.created_at}
+
     if 'retweeted_status' in dir(tweet):
-        df.loc[i, 'retweeted_status'] = tweet.retweeted_status.full_text
+        data['retweeted_status'] = tweet.retweeted_status.full_text
     else:
-        df.loc[i, 'retweeted_status'] = tweet.full_text
-    df.loc[i, 'User'] = tweet.user.name
-    df.loc[i, 'User_statuses_count'] = tweet.user.statuses_count
-    df.loc[i, 'user_followers'] = tweet.user.followers_count
-    df.loc[i, 'User_location'] = tweet.user.location
-    df.loc[i, 'User_verified'] = tweet.user.verified
-    df.loc[i, 'fav_count'] = tweet.favorite_count
-    df.loc[i, 'rt_count'] = tweet.retweet_count
-    df.loc[i, 'tweet_date'] = tweet.created_at
-    return df
+        data['retweeted_status'] = tweet.full_text
+
+    return data
 
 
 def capture_tweets(corpus, fetched_tweets_filename, count, tweepy):
-    # if os.path.isfile(fetched_tweets_filename):
-    #     df_tweets = pd.read_excel(fetched_tweets_filename)
-    # else:
-    df_tweets = pd.DataFrame(columns=['Tweets', 'User', 'User_statuses_count',
-                                      'user_followers', 'User_location', 'User_verified',
-                                      'fav_count', 'rt_count', 'tweet_date'])
     i = 0
+    if os.path.isfile(fetched_tweets_filename):
+        df_tweets = pd.read_excel(fetched_tweets_filename)
+    else:
+        df_tweets = pd.DataFrame()
 
     for tweet in Cursor(tweepy.search, q=corpus, tweet_mode='extended').items(count):  # , lang='es'
-        print(i, end='\r')  # Para ver por que tweet voy agregando
-        df_tweets = df_tweets.append(process_tweet(tweet, i))
+        print(i, end='\r')
+        df_tweets = df_tweets.append(process_tweet(tweet), ignore_index=True)
         i += 1
 
-    df_tweets.head()
-    df_tweets.to_excel(fetched_tweets_filename)
+    df_tweets.to_excel(fetched_tweets_filename, index=False)
 
 
 # Proceso Principal
 if __name__ == "__main__":
-    hash_tag_list = ['aerolineas argentinas', 'clima']
-    fetched_tweets_filename = "tweets_arsa_crudo_prueba.xlsx"
-
-    # Palabras claves a aparecer en los tweets
-    corpus = ['aerolineas argentinas']
-    count = 10
-
     twitter_client = TwitterClient()
     tweepy = twitter_client.get_twitter_client_api()
 
-    capture_tweets(corpus, fetched_tweets_filename, count, tweepy)
+    # Palabras claves a aparecer en los tweets ,
+    word_tag_lists = [['aerolineas argentinas', 'aerolineas', 'argentinas', 'austral'],
+                      ['aerolineas argentinas', 'aerolineas', 'argentinas', 'austral']]
+
+    # Cantidad de tweets a traer
+    count = 100
+
+    # Nombre del archivo donde se almacenaran los tweets
+    fetched_tweets_filename = "tweets_arsa_crudo_prueba2.xlsx"
+
+    for wtl in word_tag_lists:
+        capture_tweets(wtl, fetched_tweets_filename, count, tweepy)
 
 # %% Modulo comentado
 

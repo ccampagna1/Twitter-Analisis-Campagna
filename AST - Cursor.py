@@ -1,22 +1,18 @@
 from tweepy import API
 from tweepy import Cursor
-from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler
-from tweepy import Stream
 
 from textblob import TextBlob
 
 import twitter_credentials
-import numpy as np
 import pandas as pd
 import re
-#import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 import json
 import os
 
 
-####### TWITTER CLIENT ########
 class TwitterClient():
     def __init__(self, twitter_user=None):
         self.auth = TwitterAuthenticator().authenticate_twitter_app()
@@ -51,7 +47,6 @@ class TwitterClient():
         return home_timeline_tweets
 
 
-####### TWITTER AUTHENTICATER ########
 class TwitterAuthenticator():
 
     def authenticate_twitter_app(self):
@@ -60,157 +55,98 @@ class TwitterAuthenticator():
         return auth
 
 
-####### TWITTER STREAMER ########
-class TwitterStreamer():
-    """
-    Esta clase es para stremear y procesar tweets en vivo
-    """
-
-    def __init__(self):
-        self.twitter_autenticator = TwitterAuthenticator()
-
-    def stream_tweets(self, fetched_tweets_filename, hash_tag_list):
-        # maneja la autentificacion y la coneccion con la API de streaming de twitter. Metodo preveniente de la clase
-        # Stream
-        listener = TwitterListener(fetched_tweets_filename)
-        auth = self.twitter_autenticator.authenticate_twitter_app()
-        stream = Stream(auth, listener)
-
-        # Filtra los twitters por los hashtags que sean pasados:
-        stream.filter(track=hash_tag_list)
+def clean_tweet(tweet):
+    # expresion regular que elimina caracteres especiaey links. Mantiene solo
+    # valores alfanumericos y elimina cadenas que tienen las barras dentro de una "palabra"
+    # clean_tweet = ' '.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)", " ", tweet).split())
+    # print(clean_tweet)
+    return clean_tweet
 
 
-####### TWITTER STREAM LISTENER ########
-class TwitterListener(StreamListener):
-    """
-    Listener basico que imprime los tweets que recive. Vamos a construir
-    una clase que nos permita imprimir los tweets que van llegando.
-    """
+def analyze_sentiment(tweet):
+    analysis = TextBlob(clean_tweet(tweet))
 
-    def __init__(self, fetched_tweets_filename):
-        self.fetched_tweets_filename = fetched_tweets_filename
+    # si es positivo se interpreta que el tweet es positivo
+    if analysis.sentiment.polarity > 0:
+        return 1
 
-    # estamos sobreescribiendo los metodos de la clase streamListener
-    def on_data(self, data):
+    if analysis.sentiment.polarity == 0:
+        return 0
 
-        ta = TweetAnalyzer()
-
-        try:
-            tweet = json.loads(data)
-
-            if os.path.isfile(self.fetched_tweets_filename):
-                df_tweets = pd.read_csv(self.fetched_tweets_filename)
-            else:
-                df_tweets = pd.DataFrame()
-
-            ta.tweet_to_data_frame(tweet, self.fetched_tweets_filename, df_tweets)
-
-        except BaseException as e:
-            print("Error on_data: %s" % str(e))
-
-        return True
-
-    def on_error(self, status):
-        if status == 420:
-            # Returning False on_data method in case rate limit occurs.
-            return False
-        print(status)
+    if analysis.sentiment.polarity < 0:
+        return -1
 
 
-####### TWITTER ANALYZER ########
-class TweetAnalyzer():
-    """
-    Analizar y categorizar el contenido de los tweets.
-    """
+def process_tweet(tweet, i):
+    df = pd.DataFrame(columns=['Tweets', 'Tweets_retweet', 'User', 'User_statuses_count',
+                               'user_followers', 'User_location', 'User_verified',
+                               'fav_count', 'rt_count', 'tweet_date'])
+    df.loc[i, 'Tweets'] = tweet.full_text
+    if 'retweeted_status' in dir(tweet):
+        df.loc[i, 'retweeted_status'] = tweet.retweeted_status.full_text
+    else:
+        df.loc[i, 'retweeted_status'] = tweet.full_text
+    df.loc[i, 'User'] = tweet.user.name
+    df.loc[i, 'User_statuses_count'] = tweet.user.statuses_count
+    df.loc[i, 'user_followers'] = tweet.user.followers_count
+    df.loc[i, 'User_location'] = tweet.user.location
+    df.loc[i, 'User_verified'] = tweet.user.verified
+    df.loc[i, 'fav_count'] = tweet.favorite_count
+    df.loc[i, 'rt_count'] = tweet.retweet_count
+    df.loc[i, 'tweet_date'] = tweet.created_at
+    return df
 
-    def __init__(self):
-        pass
 
-    def tweet_to_data_frame(self, tweet, fetched_tweets_filename, df):
+def capture_tweets(corpus, fetched_tweets_filename, count, tweepy):
+    # if os.path.isfile(fetched_tweets_filename):
+    #     df_tweets = pd.read_excel(fetched_tweets_filename)
+    # else:
+    df_tweets = pd.DataFrame(columns=['Tweets', 'User', 'User_statuses_count',
+                                      'user_followers', 'User_location', 'User_verified',
+                                      'fav_count', 'rt_count', 'tweet_date'])
+    i = 0
 
-        i = df.shape[0]
+    for tweet in Cursor(tweepy.search, q=corpus, tweet_mode='extended').items(count):  # , lang='es'
+        print(i, end='\r')  # Para ver por que tweet voy agregando
+        df_tweets = df_tweets.append(process_tweet(tweet, i))
+        i += 1
 
-        df.loc[i, 'tweets'] = tweet['text']
-        df.loc[i, 'user'] = tweet['user']['name']
-        df.loc[i, 'user_statuses_count'] = tweet['user']['statuses_count']
-        df.loc[i, 'user_followers'] = tweet['user']['followers_count']
-        df.loc[i, 'user_location'] = tweet['user']['location']
-        df.loc[i, 'user_verified'] = tweet['user']['verified']
-        df.loc[i, 'fav_count'] = tweet['favorite_count']
-        df.loc[i, 'rt_count'] = tweet['retweet_count']
-        df.loc[i, 'tweet_date'] = tweet['created_at']
-        df.loc[i, 'sentiment'] = self.analyze_sentiment(tweet['text'])
-
-        # if tweet['retweeted_status']:
-        #     df['Tweets_retweet'] = tweet['retweeted_status']['extended_tweet']["full_text"]
-        # else:
-        #     df['Tweets_retweet'] = ''
-
-        df.to_csv(fetched_tweets_filename, index=False)
-
-    def clean_tweet(self, tweet):
-        # expresion regular que elimina caracteres especiaey links. Mantiene solo
-        # valores alfanumericos y elimina cadenas que tienen las barras dentro de una "palabra"
-        clean_tweet = ' '.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)", " ", tweet).split())
-        # print(clean_tweet)
-        return clean_tweet
-
-    def analyze_sentiment(self, tweet):
-        analysis = TextBlob(self.clean_tweet(tweet))
-
-        # si es positivo se interpreta que el tweet es positivo
-        if analysis.sentiment.polarity > 0:
-            return 1
-
-        if analysis.sentiment.polarity == 0:
-            return 0
-
-        if analysis.sentiment.polarity < 0:
-            return -1
+    df_tweets.head()
+    df_tweets.to_excel(fetched_tweets_filename)
 
 
 # Proceso Principal
 if __name__ == "__main__":
-    # twitter_client = TwitterClient()
-    # tweet_analyzer = TweetAnalyzer()
-
-    # api = twitter_client.get_twitter_client_api()
-
-    # es una funcion provenida desde la libreria API creada en el "twitter client"
-    # nos permite especificar usuario, cuantos tweets sacar de ese usuario
-    # tweets = api.user_timeline(screen_name="realdonaldtrump", count=50, lang='en')
-
-    # df = tweet_analyzer.tweets_to_data_frame(tweets)
-    # print(df.head(10))
-
-    #    CLASE 1 - STREAMING DE TWEETS
-
     hash_tag_list = ['aerolineas argentinas', 'clima']
-    fetched_tweets_filename = "df_tweets.csv"
+    fetched_tweets_filename = "tweets_arsa_crudo_prueba.xlsx"
 
-    #    interested_columns = ['Tweets', 'User', 'User_statuses_count',
-    #                             'user_followers', 'User_location', 'User_verified',
-    #                             'fav_count', 'rt_count', 'tweet_date']
-    #
-    #    tweet_analyzer = TweetAnalyzer(interested_columns)
+    # Palabras claves a aparecer en los tweets
+    corpus = ['aerolineas argentinas']
+    count = 10
 
-    twetter_streamer = TwitterStreamer()
-    twetter_streamer.stream_tweets(fetched_tweets_filename, hash_tag_list)
+    twitter_client = TwitterClient()
+    tweepy = twitter_client.get_twitter_client_api()
 
-# %%    CLASE 2 - CURSOR Y PAGINACION
+    capture_tweets(corpus, fetched_tweets_filename, count, tweepy)
 
-# =============================================================================
-#     # Con esto podemos ver cuales son los campos que podemos consultar de un tweet.
-#     #print(dir(tweets[0]))
+# %% Modulo comentado
+
+# es una funcion provenida desde la libreria API creada en el "twitter client"
+# nos permite especificar usuario, cuantos tweets sacar de ese usuario
+# tweets = api.user_timeline(screen_name="realdonaldtrump", count=50, lang='en')
+
+# df = tweet_analyzer.tweets_to_data_frame(tweets)
+# print(df.head(10))
+
+
+#    interested_columns = ['Tweets', 'User', 'User_statuses_count',
+#                             'user_followers', 'User_location', 'User_verified',
+#                             'fav_count', 'rt_count', 'tweet_date']
 #
-#     twitter_client = TwitterClient('pycon')
-#     print(twitter_client.get_user_timeline_tweets(1))
-#
-#     # cuenta la cantidad de retweets que tuvo un tweet
-#     #print(tweets[0].retweet_count)
-# =============================================================================
+#    tweet_analyzer = TweetAnalyzer(interested_columns)
 
-# %%    CLASE 3 - ANALISIS DE LOS DATOS
+
+# %% ANALISIS DE LOS DATOS
 
 # =============================================================================
 #     # Get average length over all tweets.
@@ -223,7 +159,7 @@ if __name__ == "__main__":
 #     print(np.max(df['retweets']))
 # =============================================================================
 
-# %%    CLASE 4 - VISUALIZACION DE LA INFORMACION
+# %% VISUALIZACION DE LA INFORMACION
 
 # =============================================================================
 #     #Time Series
@@ -241,13 +177,4 @@ if __name__ == "__main__":
 #     time_retweets = pd.Series(data=df['retweets'].values, index=df['date'])
 #     time_retweets.plot(figsize = (16,4), label = 'retweets', legend = True)
 #     plt.show()
-# =============================================================================
-
-# %%    CLASE 5 ANALISIS DE SENTIMIENTOS
-
-# =============================================================================
-#    df['sentiment'] = np.array([tweet_analyzer.analyze_sentiment(tweet) for tweet in df['tweets']])
-#
-#    print(df.head(10))
-#
 # =============================================================================

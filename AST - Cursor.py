@@ -82,17 +82,21 @@ def process_tweet(tweet):
     Se campura la informacion requerida de un tweet.
     """
 
-    data = {'Tweets': tweet.full_text, 'User': tweet.user.name, 'User_statuses_count': tweet.user.statuses_count,
-            'User_followers': tweet.user.followers_count, 'User_verified': tweet.user.verified,
-            'User_location': tweet.user.location, 'fav_count': tweet.favorite_count, 'rt_count': tweet.retweet_count,
-            'tweet_date': tweet.created_at}
+    data_tweet = {'tweet_id': tweet.id, 'tweet_full_text': '', 'tweet_fav_count': tweet.favorite_count,
+                  'tweet_retweet_count': tweet.retweet_count, 'tweet_place': tweet.place, 'tweet_geo': tweet.geo,
+                  'tweet_source': tweet.source, 'tweet_date': tweet.created_at, 'tweet_hashtags': tweet.entities['hashtags'],
+                  'user_id': tweet.user.id, 'user_name': tweet.user.name, 'user_screen_name': tweet.user.screen_name,
+                  'user_description': tweet.user.description, 'user_statuses_count': tweet.user.statuses_count,
+                  'user_favourites_count': tweet.user.favourites_count, 'user_followers': tweet.user.followers_count,
+                  'user_friends': tweet.user.friends_count, 'user_verified': tweet.user.verified,
+                  'user_location': tweet.user.location, 'user_date': tweet.user.created_at}
 
     if 'retweeted_status' in dir(tweet):
-        data['retweeted_status'] = tweet.retweeted_status.full_text
+        data_tweet['tweet_full_text'] = tweet.retweeted_status.full_text
     else:
-        data['retweeted_status'] = tweet.full_text
+        data_tweet['tweet_full_text'] = tweet.full_text
 
-    return data
+    return data_tweet
 
 
 def capture_tweets(corpus, fetched_tweets_filename, count, tweepy):
@@ -116,14 +120,16 @@ if __name__ == "__main__":
     tweepy = twitter_client.get_twitter_client_api()
 
     # Palabras claves a aparecer en los tweets ,
-    word_tag_lists = [['aerolineas argentinas', 'aerolineas', 'argentinas', 'austral'],
-                      ['aerolineas argentinas', 'aerolineas', 'argentinas', 'austral']]
+    word_tag_lists = [['aerolineas', 'argentinas', 'austral'],
+                      ['aerolineas', 'argentinas', 'vuelos'],
+                      ['aerolineas', 'argentinas', 'paro'],
+                      ['aerolineas', 'argentinas', 'gremio']]
 
     # Cantidad de tweets a traer
-    count = 100
+    count = 100000
 
     # Nombre del archivo donde se almacenaran los tweets
-    fetched_tweets_filename = "tweets_arsa_crudo_prueba2.xlsx"
+    fetched_tweets_filename = "tweets_arsa_crudo.xlsx"
 
     for wtl in word_tag_lists:
         capture_tweets(wtl, fetched_tweets_filename, count, tweepy)

@@ -102,7 +102,7 @@ class TweetAnalyzer():
         df.loc[i, 'tweet_date'] = tweet['created_at']
         df.loc[i, 'sentiment'] = self.analyze_sentiment(tweet['text'])
 
-        # if tweet['retweeted_status']:
+    # if tweet['retweeted_status']:
         #     df['Tweets_retweet'] = tweet['retweeted_status']['extended_tweet']["full_text"]
         # else:
         #     df['Tweets_retweet'] = ''

@@ -83,7 +83,7 @@ def process_tweet(tweet):
     """
 
     data_tweet = {'tweet_id': tweet.id, 'tweet_full_text': '', 'tweet_fav_count': tweet.favorite_count,
-                  'tweet_retweet_count': tweet.retweet_count, 'tweet_place': tweet.place, 'tweet_geo': tweet.geo,
+                  'tweet_retweet_count': tweet.retweet_count,
                   'tweet_source': tweet.source, 'tweet_date': tweet.created_at, 'tweet_hashtags': tweet.entities['hashtags'],
                   'user_id': tweet.user.id, 'user_name': tweet.user.name, 'user_screen_name': tweet.user.screen_name,
                   'user_description': tweet.user.description, 'user_statuses_count': tweet.user.statuses_count,
